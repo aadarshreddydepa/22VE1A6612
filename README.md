@@ -90,3 +90,6 @@ This project is for educational purposes.
 
 ### 📸 Screenshot 5
 ![Screenshot 5](./Output/image.png)
+
+### 📸 Mobile View
+![Mobile View](./Output/Screenshot%202025-07-18%20150708.png)
