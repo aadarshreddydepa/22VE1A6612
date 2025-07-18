@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Copy, BarChart3, Link2, Globe, Calendar, MousePointer } from 'lucide-react';
+import { Copy, BarChart3, Link2, Globe, Calendar, MousePointer, Check } from 'lucide-react';
+import './App.css';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -9,7 +10,7 @@ const logger = {
   warn: (msg, data) => console.warn(`[WARN] ${new Date().toISOString()}: ${msg}`, data)
 };
 
-const URLShortener = () => {
+const App = () => {
   const [activeTab, setActiveTab] = useState('shorten');
   const [url, setUrl] = useState('');
   const [validity, setValidity] = useState(30);
@@ -20,6 +21,7 @@ const URLShortener = () => {
   const [statsCode, setStatsCode] = useState('');
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const showMessage = (text, type = 'success') => {
     setMessage({ text, type });
@@ -27,15 +29,30 @@ const URLShortener = () => {
     setTimeout(() => setMessage(''), 4000);
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    showMessage('Copied to clipboard!');
-    logger.info('Text copied to clipboard', { text });
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      showMessage('Copied to clipboard!');
+      logger.info('Text copied to clipboard', { text });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      showMessage('Failed to copy to clipboard', 'error');
+    }
   };
 
   const shortenUrl = async () => {
-    if (!url) {
+    if (!url.trim()) {
       showMessage('Please enter a URL', 'error');
+      return;
+    }
+
+    // Basic URL validation
+    try {
+      new URL(url);
+    } catch {
+      showMessage('Please enter a valid URL', 'error');
       return;
     }
 
@@ -47,9 +64,9 @@ const URLShortener = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url,
+          url: url.trim(),
           validity: Number(validity),
-          shortcode: shortcode || undefined
+          shortcode: shortcode.trim() || undefined
         })
       });
 
@@ -74,7 +91,7 @@ const URLShortener = () => {
   };
 
   const fetchStats = async () => {
-    if (!statsCode) {
+    if (!statsCode.trim()) {
       showMessage('Please enter a shortcode', 'error');
       return;
     }
@@ -83,7 +100,7 @@ const URLShortener = () => {
     logger.info('Fetching statistics', { shortcode: statsCode });
 
     try {
-      const response = await fetch(`${API_BASE}/shorturls/${statsCode}`);
+      const response = await fetch(`${API_BASE}/shorturls/${statsCode.trim()}`);
       
       if (!response.ok) {
         const error = await response.json();
@@ -103,119 +120,144 @@ const URLShortener = () => {
     }
   };
 
-  const formatDate = (date) => new Date(date).toLocaleDateString();
+  const formatDate = (date) => {
+    try {
+      return new Date(date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'Invalid date';
+    }
+  };
+
+  const handleKeyPress = (e, action) => {
+    if (e.key === 'Enter') {
+      action();
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-            URL Shortener
-          </h1>
-          <p className="text-gray-600 text-lg">Create short, memorable links in seconds</p>
+    <div className="url-shortener">
+      <div className="container">
+        {/* Header */}
+        <div className="header">
+          <h1 className="title">URL Shortener</h1>
+          <p className="subtitle">
+            Create short, memorable links in seconds with advanced analytics
+          </p>
         </div>
 
-        {/* Message */}
+        {/* Message Alert */}
         {message && (
-          <div className={`mb-6 p-4 rounded-xl text-center shadow-lg transform animate-pulse ${
-            message.type === 'error' 
-              ? 'bg-red-50 border border-red-200 text-red-700' 
-              : 'bg-green-50 border border-green-200 text-green-700'
-          }`}>
-            {message.text}
+          <div className={`message ${message.type}`}>
+            <div className="message-content">
+              <span className="message-text">{message.text}</span>
+            </div>
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex mb-8 bg-white rounded-2xl shadow-lg overflow-hidden">
+        {/* Navigation Tabs */}
+        <div className="tabs">
           <button
             onClick={() => setActiveTab('shorten')}
-            className={`flex-1 flex items-center justify-center gap-3 py-4 px-6 transition-all duration-300 ${
-              activeTab === 'shorten' 
-                ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg' 
-                : 'text-gray-600 hover:bg-gray-50'
-            }`}
+            className={`tab ${activeTab === 'shorten' ? 'active' : ''}`}
           >
             <Link2 size={20} />
-            <span className="font-semibold">Shorten URL</span>
+            <span className="tab-text">Shorten URL</span>
           </button>
           <button
             onClick={() => setActiveTab('stats')}
-            className={`flex-1 flex items-center justify-center gap-3 py-4 px-6 transition-all duration-300 ${
-              activeTab === 'stats' 
-                ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg' 
-                : 'text-gray-600 hover:bg-gray-50'
-            }`}
+            className={`tab ${activeTab === 'stats' ? 'active' : ''}`}
           >
             <BarChart3 size={20} />
-            <span className="font-semibold">Statistics</span>
+            <span className="tab-text">Statistics</span>
           </button>
         </div>
 
         {/* Shorten URL Tab */}
         {activeTab === 'shorten' && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
-            <div className="space-y-6">
-              <div className="relative">
-                <Globe className="absolute left-3 top-3 text-gray-400" size={20} />
+          <div className="card">
+            <div className="form-content">
+              {/* URL Input */}
+              <div className="input-group">
+                <Globe className="input-icon" size={20} />
                 <input
                   type="url"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
+                  onKeyPress={(e) => handleKeyPress(e, shortenUrl)}
                   placeholder="Enter URL to shorten (e.g., https://example.com)"
-                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300"
+                  className="input-field url-input"
                 />
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-3 text-gray-400" size={20} />
+              {/* Validity and Custom Code */}
+              <div className="input-row">
+                <div className="input-group">
+                  <Calendar className="input-icon" size={20} />
                   <input
                     type="number"
                     value={validity}
-                    onChange={(e) => setValidity(e.target.value)}
-                    placeholder="Validity (minutes)"
-                    className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300"
+                    onChange={(e) => setValidity(Math.max(1, e.target.value))}
+                    className="input-field validity-input"
                     min="1"
                   />
+                  <label className="input-label">Validity (minutes)</label>
                 </div>
-                <input
-                  type="text"
-                  value={shortcode}
-                  onChange={(e) => setShortcode(e.target.value)}
-                  placeholder="Custom code (optional)"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300"
-                />
+                <div className="input-group">
+                  <input
+                    type="text"
+                    value={shortcode}
+                    onChange={(e) => setShortcode(e.target.value)}
+                    placeholder="Optional custom code"
+                    className="input-field"
+                  />
+                  <label className="input-label">Custom Code (optional)</label>
+                </div>
               </div>
               
+              {/* Shorten Button */}
               <button
                 onClick={shortenUrl}
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold py-4 px-6 rounded-xl hover:from-blue-600 hover:to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 shadow-lg"
+                className="btn btn-primary"
               >
-                {loading ? 'Shortening...' : 'Shorten URL'}
+                {loading ? (
+                  <div className="btn-loading">
+                    <div className="spinner"></div>
+                    Shortening...
+                  </div>
+                ) : (
+                  'Shorten URL'
+                )}
               </button>
             </div>
 
-            {/* Result */}
+            {/* Result Display */}
             {result && (
-              <div className="mt-8 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl border border-green-200">
-                <h3 className="font-bold text-lg mb-4 text-gray-800">✨ Your shortened URL:</h3>
-                <div className="flex items-center gap-3 mb-4">
-                  <code className="bg-white px-4 py-2 rounded-lg text-sm flex-1 border shadow-sm">
-                    {result.shortlink}
-                  </code>
+              <div className="result-card">
+                <h3 className="result-title">
+                  <span className="result-icon">✨</span>
+                  Your shortened URL:
+                </h3>
+                <div className="result-content">
+                  <code className="result-url">{result.shortlink}</code>
                   <button
                     onClick={() => copyToClipboard(result.shortlink)}
-                    className="text-blue-500 hover:text-blue-700 p-2 rounded-lg hover:bg-blue-50 transition-all duration-200"
+                    className="copy-btn"
+                    title="Copy to clipboard"
                   >
-                    <Copy size={18} />
+                    {copied ? <Check size={18} className="copy-success" /> : <Copy size={18} />}
                   </button>
                 </div>
-                <p className="text-sm text-gray-600 flex items-center gap-2">
+                <div className="result-expiry">
                   <Calendar size={16} />
-                  Expires: {formatDate(result.expiry)}
-                </p>
+                  <span>Expires: {formatDate(result.expiry)}</span>
+                </div>
               </div>
             )}
           </div>
@@ -223,69 +265,105 @@ const URLShortener = () => {
 
         {/* Statistics Tab */}
         {activeTab === 'stats' && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row gap-3">
+          <div className="card">
+            <div className="form-content">
+              {/* Stats Input */}
+              <div className="stats-input-row">
                 <input
                   type="text"
                   value={statsCode}
                   onChange={(e) => setStatsCode(e.target.value)}
-                  placeholder="Enter shortcode"
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300"
+                  onKeyPress={(e) => handleKeyPress(e, fetchStats)}
+                  placeholder="Enter shortcode (e.g., abc123)"
+                  className="input-field stats-input"
                 />
                 <button
                   onClick={fetchStats}
                   disabled={statsLoading}
-                  className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold px-6 py-3 rounded-xl hover:from-blue-600 hover:to-indigo-600 disabled:opacity-50 transition-all duration-300 shadow-lg"
+                  className="btn btn-primary stats-btn"
                 >
-                  {statsLoading ? 'Loading...' : 'Get Stats'}
+                  {statsLoading ? (
+                    <div className="btn-loading">
+                      <div className="spinner"></div>
+                      Loading...
+                    </div>
+                  ) : (
+                    'Get Stats'
+                  )}
                 </button>
               </div>
 
               {/* Stats Display */}
               {stats && (
-                <div className="space-y-6">
-                  <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
-                    <h3 className="font-bold text-lg mb-4 text-gray-800">📊 URL Statistics</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div className="text-center p-4 bg-white rounded-xl shadow-sm">
-                        <MousePointer className="mx-auto mb-2 text-blue-500" size={24} />
-                        <p className="text-gray-600 text-sm">Total Clicks</p>
-                        <p className="text-3xl font-bold text-blue-600">{stats.totalClicks || 0}</p>
+                <div className="stats-content">
+                  <div className="stats-main">
+                    <h3 className="stats-title">
+                      <span className="stats-icon">📊</span>
+                      URL Statistics
+                    </h3>
+                    
+                    {/* Stats Grid */}
+                    <div className="stats-grid">
+                      <div className="stat-card">
+                        <MousePointer className="stat-icon clicks-icon" size={28} />
+                        <p className="stat-label">Total Clicks</p>
+                        <p className="stat-value clicks-value">{stats.totalClicks || 0}</p>
                       </div>
-                      <div className="text-center p-4 bg-white rounded-xl shadow-sm">
-                        <Calendar className="mx-auto mb-2 text-green-500" size={24} />
-                        <p className="text-gray-600 text-sm">Created</p>
-                        <p className="font-semibold text-green-600">{formatDate(stats.createdAt)}</p>
+                      <div className="stat-card">
+                        <Calendar className="stat-icon date-icon" size={28} />
+                        <p className="stat-label">Created</p>
+                        <p className="stat-value date-value">{formatDate(stats.createdAt)}</p>
                       </div>
                     </div>
-                    <div className="mt-4 p-4 bg-white rounded-xl shadow-sm">
-                      <p className="text-gray-600 text-sm mb-2">Original URL:</p>
-                      <p className="text-sm break-all font-mono bg-gray-50 p-2 rounded">{stats.originalUrl}</p>
+
+                    {/* Original URL */}
+                    <div className="original-url">
+                      <p className="original-url-label">Original URL:</p>
+                      <p className="original-url-value">{stats.originalUrl}</p>
                     </div>
-                    <p className="text-sm text-gray-600 mt-4 flex items-center gap-2">
+
+                    {/* Expiry Info */}
+                    <div className="stats-expiry">
                       <Calendar size={16} />
-                      Expires: {formatDate(stats.expiryDate)}
-                    </p>
+                      <span>Expires: {formatDate(stats.expiryDate)}</span>
+                    </div>
                   </div>
 
                   {/* Click History */}
                   {stats.clicks && stats.clicks.length > 0 && (
-                    <div className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-200">
-                      <h4 className="font-bold text-lg mb-4 text-gray-800">🕒 Recent Clicks</h4>
-                      <div className="space-y-3 max-h-60 overflow-y-auto">
-                        {stats.clicks.slice(-10).map((click, index) => (
-                          <div key={index} className="p-3 bg-white rounded-xl shadow-sm">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                              <span className="font-medium text-gray-800">{new Date(click.timestamp).toLocaleString()}</span>
-                              <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">{click.location || 'Unknown'}</span>
+                    <div className="click-history">
+                      <h4 className="click-history-title">
+                        <span className="click-history-icon">🕒</span>
+                        Recent Clicks ({stats.clicks.length})
+                      </h4>
+                      <div className="click-list">
+                        {stats.clicks.slice(-10).reverse().map((click, index) => (
+                          <div key={index} className="click-item">
+                            <div className="click-header">
+                              <span className="click-time">
+                                {new Date(click.timestamp).toLocaleString()}
+                              </span>
+                              <span className="click-location">
+                                {click.location || 'Unknown Location'}
+                              </span>
                             </div>
                             {click.referrer && (
-                              <p className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded">From: {click.referrer}</p>
+                              <p className="click-referrer">
+                                <span className="referrer-label">Referrer:</span> {click.referrer}
+                              </p>
                             )}
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Empty State for No Clicks */}
+                  {stats.clicks && stats.clicks.length === 0 && (
+                    <div className="no-clicks">
+                      <MousePointer className="no-clicks-icon" size={48} />
+                      <p className="no-clicks-title">No clicks yet</p>
+                      <p className="no-clicks-subtitle">Share your shortened URL to start tracking clicks!</p>
                     </div>
                   )}
                 </div>
@@ -298,4 +376,4 @@ const URLShortener = () => {
   );
 };
 
-export default URLShortener;
+export default App;
