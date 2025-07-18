@@ -74,11 +74,19 @@ The frontend will typically run on [http://localhost:5173](http://localhost:5173
 This project is for educational purposes.
 
 
-## ScreenShots of the URL Shortner
+## Screenshots of the URL Shortener
 
-[!Screenshot 1](./Output/Screenshot%20(47).png)
-[!Screenshot 2](./Output/Screenshot%20(48).png)
-[!Screenshot 3](./Output/Screenshot%20(49).png)
-[!Screenshot 4](./Output/Screenshot%20(50).png)
-[!Screenshot 5](./Output/image.png)
+### 📸 Screenshot 1
+![Screenshot 1](./Output/Screenshot%20(47).png)
 
+### 📸 Screenshot 2
+![Screenshot 2](./Output/Screenshot%20(48).png)
+
+### 📸 Screenshot 3
+![Screenshot 3](./Output/Screenshot%20(49).png)
+
+### 📸 Screenshot 4
+![Screenshot 4](./Output/Screenshot%20(50).png)
+
+### 📸 Screenshot 5
+![Screenshot 5](./Output/image.png)
