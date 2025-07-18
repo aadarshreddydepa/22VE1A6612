@@ -207,7 +207,7 @@ app.get('/api/stats', (req, res) => {
   }
 });
 
-// GET /api/stats/:shortcode - Get specific URL statistics
+// GET /api/stats/:shortcode - Get specific URL statistic
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', { error: err.message, stack: err.stack });
